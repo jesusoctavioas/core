@@ -31,11 +31,14 @@ namespace OC;
 use Doctrine\DBAL\Platforms\OraclePlatform;
 use OC\Cache\CappedMemoryCache;
 use OCP\IDBConnection;
+use OCP\Events\EventEmitterTrait;
 
 /**
  * Class to combine all the configuration options ownCloud offers
  */
 class AllConfig implements \OCP\IConfig {
+	use EventEmitterTrait;
+
 	/** @var SystemConfig */
 	private $systemConfig;
 
@@ -221,21 +224,28 @@ class AllConfig implements \OCP\IConfig {
 			];
 		}
 
-		$this->connection->setValues('preferences', [
-			'userid' => $userId,
-			'appid' => $appName,
-			'configkey' => $key,
-		], [
-			'configvalue' => $value,
-		], $preconditionArray);
+		return $this->emittingCall(function () use ($userId, $appName, $key, $value, $preconditionArray) {
+			$this->connection->setValues('preferences', [
+				'userid' => $userId,
+				'appid' => $appName,
+				'configkey' => $key,
+			], [
+				'configvalue' => $value,
+			], $preconditionArray);
 
-		// only add to the cache if we already loaded data for the user
-		if (isset($this->userCache[$userId])) {
-			if (!isset($this->userCache[$userId][$appName])) {
-				$this->userCache[$userId][$appName] = [];
+			// only add to the cache if we already loaded data for the user
+			if (isset($this->userCache[$userId])) {
+				if (!isset($this->userCache[$userId][$appName])) {
+					$this->userCache[$userId][$appName] = [];
+				}
+				$this->userCache[$userId][$appName][$key] = $value;
 			}
-			$this->userCache[$userId][$appName][$key] = $value;
-		}
+
+			return true;
+		}, [
+			'before' => ['user' => $userId, 'key' => $key, 'value' => $value, 'app' => $appName, 'precondition' => $preCondition],
+			'after' => ['user' => $userId, 'key' => $key, 'value' => $value, 'app' => $appName, 'precondition' => $preCondition]
+		], 'userpreferences', 'setvalue');
 	}
 
 	/**
@@ -283,13 +293,20 @@ class AllConfig implements \OCP\IConfig {
 		// TODO - FIXME
 		$this->fixDIInit();
 
-		$sql  = 'DELETE FROM `*PREFIX*preferences` '.
-				'WHERE `userid` = ? AND `appid` = ? AND `configkey` = ?';
-		$this->connection->executeUpdate($sql, [$userId, $appName, $key]);
+		return $this->emittingCall(function () use ($userId, $appName, $key) {
+			$sql  = 'DELETE FROM `*PREFIX*preferences` '.
+					'WHERE `userid` = ? AND `appid` = ? AND `configkey` = ?';
+			$this->connection->executeUpdate($sql, [$userId, $appName, $key]);
 
-		if (isset($this->userCache[$userId]) and isset($this->userCache[$userId][$appName])) {
-			unset($this->userCache[$userId][$appName][$key]);
-		}
+			if (isset($this->userCache[$userId]) and isset($this->userCache[$userId][$appName])) {
+				unset($this->userCache[$userId][$appName][$key]);
+			}
+
+			return true;
+		}, [
+			'before' => ['user' => $userId, 'key' => $key, 'app' => $appName],
+			'after' => ['user' => $userId, 'key' => $key, 'app' => $appName]
+		], 'userpreferences', 'deletevalue');
 	}
 
 	/**
@@ -301,9 +318,16 @@ class AllConfig implements \OCP\IConfig {
 		// TODO - FIXME
 		$this->fixDIInit();
 
-		$sql  = 'DELETE FROM `*PREFIX*preferences` '.
-			'WHERE `userid` = ?';
-		$this->connection->executeUpdate($sql, [$userId]);
+		return $this->emittingCall(function () use ($userId) {
+			$sql  = 'DELETE FROM `*PREFIX*preferences` '.
+				'WHERE `userid` = ?';
+			$this->connection->executeUpdate($sql, [$userId]);
+
+			return true;
+		}, [
+			'before' => ['user' => $userId],
+			'after' => ['user' => $userId]
+		], 'userpreferences', 'deleteuser');
 
 		unset($this->userCache[$userId]);
 	}
@@ -317,13 +341,20 @@ class AllConfig implements \OCP\IConfig {
 		// TODO - FIXME
 		$this->fixDIInit();
 
-		$sql  = 'DELETE FROM `*PREFIX*preferences` '.
-				'WHERE `appid` = ?';
-		$this->connection->executeUpdate($sql, [$appName]);
+		return $this->emittingCall(function () use ($appName) {
+			$sql  = 'DELETE FROM `*PREFIX*preferences` '.
+					'WHERE `appid` = ?';
+			$this->connection->executeUpdate($sql, [$appName]);
 
-		foreach ($this->userCache as &$userCache) {
-			unset($userCache[$appName]);
-		}
+			foreach ($this->userCache as &$userCache) {
+				unset($userCache[$appName]);
+			}
+
+			return true;
+		}, [
+			'before' => ['app' => $appName],
+			'after' => ['app' => $appName]
+		], 'userpreferences', 'deleteapp');
 	}
 
 	/**
