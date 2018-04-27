@@ -30,13 +30,14 @@
 namespace OC;
 use Doctrine\DBAL\Platforms\OraclePlatform;
 use OC\Cache\CappedMemoryCache;
+use OCP\IConfig;
 use OCP\IDBConnection;
 use OCP\Events\EventEmitterTrait;
 
 /**
  * Class to combine all the configuration options ownCloud offers
  */
-class AllConfig implements \OCP\IConfig {
+class AllConfig implements IConfig {
 	use EventEmitterTrait;
 
 	/** @var SystemConfig */
@@ -70,7 +71,7 @@ class AllConfig implements \OCP\IConfig {
 	/**
 	 * @param SystemConfig $systemConfig
 	 */
-	function __construct(SystemConfig $systemConfig) {
+	public function __construct(SystemConfig $systemConfig) {
 		$this->userCache = new CappedMemoryCache();
 		$this->systemConfig = $systemConfig;
 	}
@@ -208,6 +209,7 @@ class AllConfig implements \OCP\IConfig {
 	 * @param string $preCondition only update if the config value was previously the value passed as $preCondition
 	 * @throws \OCP\PreConditionNotMetException if a precondition is specified and is not met
 	 * @throws \UnexpectedValueException when trying to store an unexpected value
+	 * @return bool
 	 */
 	public function setUserValue($userId, $appName, $key, $value, $preCondition = null) {
 		if (!\is_int($value) && !\is_float($value) && !\is_string($value)) {
@@ -218,7 +220,7 @@ class AllConfig implements \OCP\IConfig {
 		$this->fixDIInit();
 
 		$preconditionArray = [];
-		if (isset($preCondition)) {
+		if (null !== $preCondition) {
 			$preconditionArray = [
 				'configvalue' => $preCondition,
 			];
@@ -259,11 +261,10 @@ class AllConfig implements \OCP\IConfig {
 	 */
 	public function getUserValue($userId, $appName, $key, $default = '') {
 		$data = $this->getUserValues($userId);
-		if (isset($data[$appName]) and isset($data[$appName][$key])) {
+		if (isset($data[$appName]) && isset($data[$appName][$key])) {
 			return $data[$appName][$key];
-		} else {
-			return $default;
 		}
+		return $default;
 	}
 
 	/**
@@ -277,9 +278,8 @@ class AllConfig implements \OCP\IConfig {
 		$data = $this->getUserValues($userId);
 		if (isset($data[$appName])) {
 			return \array_keys($data[$appName]);
-		} else {
-			return [];
 		}
+		return [];
 	}
 
 	/**
@@ -288,6 +288,7 @@ class AllConfig implements \OCP\IConfig {
 	 * @param string $userId the userId of the user that we want to store the value under
 	 * @param string $appName the appName that we stored the value under
 	 * @param string $key the key under which the value is being stored
+	 * @return bool
 	 */
 	public function deleteUserValue($userId, $appName, $key) {
 		// TODO - FIXME
@@ -298,7 +299,7 @@ class AllConfig implements \OCP\IConfig {
 					'WHERE `userid` = ? AND `appid` = ? AND `configkey` = ?';
 			$this->connection->executeUpdate($sql, [$userId, $appName, $key]);
 
-			if (isset($this->userCache[$userId]) and isset($this->userCache[$userId][$appName])) {
+			if (isset($this->userCache[$userId]) && isset($this->userCache[$userId][$appName])) {
 				unset($this->userCache[$userId][$appName][$key]);
 			}
 
@@ -313,6 +314,7 @@ class AllConfig implements \OCP\IConfig {
 	 * Delete all user values
 	 *
 	 * @param string $userId the userId of the user that we want to remove all values from
+	 * @return bool
 	 */
 	public function deleteAllUserValues($userId) {
 		// TODO - FIXME
@@ -323,19 +325,20 @@ class AllConfig implements \OCP\IConfig {
 				'WHERE `userid` = ?';
 			$this->connection->executeUpdate($sql, [$userId]);
 
+			unset($this->userCache[$userId]);
+
 			return true;
 		}, [
 			'before' => ['user' => $userId],
 			'after' => ['user' => $userId]
 		], 'userpreferences', 'deleteuser');
-
-		unset($this->userCache[$userId]);
 	}
 
 	/**
 	 * Delete all user related values of one app
 	 *
 	 * @param string $appName the appName of the app that we want to remove all values from
+	 * @return bool
 	 */
 	public function deleteAppFromAllUsers($appName) {
 		// TODO - FIXME
@@ -413,7 +416,7 @@ class AllConfig implements \OCP\IConfig {
 			\array_unshift($queryParams, $key);
 			\array_unshift($queryParams, $appName);
 
-			$placeholders = (\sizeof($chunk) == 50) ? $placeholders50 :  \implode(',', \array_fill(0, \sizeof($chunk), '?'));
+			$placeholders = (\sizeof($chunk) === 50) ? $placeholders50 :  \implode(',', \array_fill(0, \sizeof($chunk), '?'));
 
 			$query    = 'SELECT `userid`, `configvalue` ' .
 						'FROM `*PREFIX*preferences` ' .
