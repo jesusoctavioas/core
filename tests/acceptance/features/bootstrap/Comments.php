@@ -31,11 +31,11 @@ require __DIR__ . '/../../../../lib/composer/autoload.php';
 trait Comments {
 
 	/**
-	 * @var int 
+	 * @var int
 	 */
 	private $lastCommentId;
 	/**
-	 * @var int 
+	 * @var int
 	 */
 	private $lastFileId;
 
@@ -109,8 +109,8 @@ trait Comments {
 			foreach ($elementRows as $expectedElement) {
 				$commentFound = false;
 				foreach ($elementList as $id => $answer) {
-					if (($answer[200]['{http://owncloud.org/ns}actorDisplayName'] === $expectedElement[0])
-						and ($answer[200]['{http://owncloud.org/ns}message'] === $expectedElement[1])
+					if (($expectedElement[0] === $answer[200]['{http://owncloud.org/ns}actorDisplayName'])
+						and ($expectedElement[1] === $answer[200]['{http://owncloud.org/ns}message'])
 					) {
 						$commentFound = true;
 						break;
@@ -202,7 +202,7 @@ trait Comments {
 		$keys = $this->response[0]['value'][2]['value'][0]['value'];
 		$found = false;
 		foreach ($keys as $singleKey) {
-			if ($singleKey['name'] === '{http://owncloud.org/ns}' . substr($key, 3)) {
+			if ($singleKey['name'] === '{http://owncloud.org/ns}' . \substr($key, 3)) {
 				if ($singleKey['value'] === $value) {
 					$found = true;
 				}
@@ -222,9 +222,9 @@ trait Comments {
 	 * @throws \Exception
 	 */
 	public function theResponseShouldContainOnlyComments($number) {
-		if (count($this->response) !== (int)$number) {
+		if (\count($this->response) !== (int)$number) {
 			throw new \Exception(
-				"Found more comments than $number (" . count($this->response) . ")"
+				"Found more comments than $number (" . \count($this->response) . ")"
 			);
 		}
 	}
@@ -276,5 +276,4 @@ trait Comments {
 			$user, $content, $this->lastFileId, $this->lastCommentId
 		);
 	}
-
 }
