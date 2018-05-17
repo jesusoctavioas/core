@@ -25,7 +25,6 @@ namespace Test\Route;
 use OC\Route\Router;
 use OCP\ILogger;
 
-
 class LoadableRouter extends Router {
 	/**
 	 * @param bool $loaded
@@ -36,7 +35,6 @@ class LoadableRouter extends Router {
 }
 
 class RouterTest extends \Test\TestCase {
-
 
 	/** @var ILogger */
 	private $l;
@@ -80,9 +78,9 @@ class RouterTest extends \Test\TestCase {
 
 		$router->useCollection('root');
 		$router->create('test', '/resource/{id}')
-			->action(function() use (&$called) {
-			$called = true;
-		})->requirements(['id' => '.+']);
+			->action(function () use (&$called) {
+				$called = true;
+			})->requirements(['id' => '.+']);
 
 		// don't load any apps
 		$router->setLoaded(true);
