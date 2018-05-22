@@ -699,7 +699,9 @@
 					name of the files.
 					*/
 					var tempDeletedFileName = this.files[i].name + '.d' + this.files[i].mtime/1000;
-					if (tempDeletedFileName === this.$fileList.children()[i].getAttribute('data-file')) {
+					if ((this.$fileList.children().length === this.files.length) &&
+						this.$fileList.children()[i].hasAttribute('data-file') &&
+						(tempDeletedFileName === this.$fileList.children()[i].getAttribute('data-file'))) {
 						this.files[i].name = tempDeletedFileName;
 					}
 					var fileData = this.files[i];
