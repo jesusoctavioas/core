@@ -694,6 +694,14 @@
 			this._selectionSummary.clear();
 			if (checked) {
 				for (var i = 0; i < this.files.length; i++) {
+					/*
+					If the selection is from trashbin we need to do update the
+					name of the files.
+					*/
+					var tempDeletedFileName = this.files[i].name + '.d' + this.files[i].mtime/1000;
+					if (tempDeletedFileName === this.$fileList.children()[i].getAttribute('data-file')) {
+						this.files[i].name = tempDeletedFileName;
+					}
 					var fileData = this.files[i];
 					this._selectedFiles[fileData.id] = fileData;
 					this._selectionSummary.add(fileData);
