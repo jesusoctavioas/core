@@ -22,6 +22,8 @@ namespace OCA\Files_Sharing;
 
 use OCP\Capabilities\ICapability;
 use OCP\IConfig;
+use OCP\IGroupManager;
+use OCP\IUserSession;
 use OCP\Util\UserSearch;
 
 /**
@@ -40,14 +42,39 @@ class Capabilities implements ICapability {
 	private $userSearch;
 
 	/**
+	 * @var IUserSession
+	 */
+	private $userSession;
+
+	/**
+	 * @var IGroupManager
+	 */
+	private $groupManager;
+
+	/**
 	 * Capabilities constructor.
 	 *
 	 * @param IConfig $config
 	 * @param UserSearch $userSearch
 	 */
-	public function __construct(IConfig $config, UserSearch $userSearch) {
+	public function __construct(IConfig $config, UserSearch $userSearch, IUserSession $userSession, IGroupManager $groupManager) {
 		$this->config = $config;
 		$this->userSearch = $userSearch;
+		$this->userSession = $userSession;
+		$this->groupManager = $groupManager;
+	}
+
+	/**
+	 * Returns whether the currently logged in user is an administrator
+	 *
+	 * @return bool true if the user is an admin
+	 */
+	private function isAdmin() {
+		$user = $this->userSession->getUser();
+		if ($user !== null) {
+			return $this->groupManager->isAdmin($user->getUID());
+		}
+		return false;
 	}
 
 	/**
@@ -104,6 +131,14 @@ class Capabilities implements ICapability {
 
 			$res['share_with_group_members_only'] = $this->config->getAppValue('core', 'shareapi_only_share_with_group_members', 'yes') === 'yes';
 			$res['share_with_membership_groups_only'] = $this->config->getAppValue('core', 'shareapi_only_share_with_membership_groups', 'yes') === 'yes';
+
+			if ($this->isAdmin()) {
+				$res['exclude_groups_from_sharing'] = $this->config->getAppValue('core', 'shareapi_exclude_groups', 'yes') === 'yes';
+
+				if ($res['exclude_groups_from_sharing']) {
+					$res['groups_excluded_from_sharing'] = \json_decode($this->config->getAppValue('core', 'shareapi_exclude_groups_list', '[]'), true);
+				}
+			}
 
 			$user_enumeration = [];
 			$user_enumeration['enabled'] = $this->config->getAppValue('core', 'shareapi_allow_share_dialog_user_enumeration', 'yes') === 'yes';

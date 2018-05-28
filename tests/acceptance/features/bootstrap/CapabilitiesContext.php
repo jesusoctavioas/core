@@ -64,6 +64,28 @@ class CapabilitiesContext implements Context, SnippetAcceptingContext {
 	}
 
 	/**
+	 * @Then the capabilities should not contain
+	 *
+	 * @param TableNode|null $formData
+	 *
+	 * @return void
+	 */
+	public function theCapabilitiesShouldNotContain(TableNode $formData) {
+		$capabilitiesXML = $this->getCapabilitiesXml();
+
+		foreach ($formData->getHash() as $row) {
+			PHPUnit_Framework_Assert::assertFalse(
+				$this->parameterValueExistsInXml(
+					$capabilitiesXML,
+					$row['capability'],
+					$row['path_to_element']
+				),
+				"Capability " . $row['capability'] . " " . $row['path_to_element'] . " exists but it should not exist"
+			);
+		}
+	}
+
+	/**
 	 * This will run before EVERY scenario.
 	 * It will set the properties for this object.
 	 *
