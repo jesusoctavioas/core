@@ -98,6 +98,7 @@ class CapabilitiesTest extends \Test\TestCase {
 		];
 		$result = $this->getResults($map);
 		$this->assertTrue($result['api_enabled']);
+		$this->assertTrue($result['can_share']);
 		$this->assertArrayHasKey('public', $result);
 		$this->assertArrayHasKey('user', $result);
 		$this->assertArrayHasKey('resharing', $result);
@@ -109,6 +110,7 @@ class CapabilitiesTest extends \Test\TestCase {
 		];
 		$result = $this->getResults($map);
 		$this->assertFalse($result['api_enabled']);
+		$this->assertFalse($result['can_share']);
 		$this->assertFalse($result['public']['enabled']);
 		$this->assertFalse($result['user']['send_mail']);
 		$this->assertFalse($result['resharing']);
@@ -374,6 +376,24 @@ class CapabilitiesTest extends \Test\TestCase {
 		];
 		$result = $this->getResults($map);
 		$this->assertTrue($result['share_with_membership_groups_only']);
+	}
+
+	public function testNoExcludeGroupsFromSharingWhenNotAdmin() {
+		$map = [
+			['core', 'shareapi_enabled', 'yes', 'yes'],
+			['core', 'shareapi_exclude_groups', 'yes', 'no'],
+		];
+		$result = $this->getResults($map);
+		$this->assertArrayNotHasKey('exclude_groups_from_sharing', $result);
+	}
+
+	public function testExcludeGroupsFromSharingWhenNotAdmin() {
+		$map = [
+			['core', 'shareapi_enabled', 'yes', 'yes'],
+			['core', 'shareapi_exclude_groups', 'yes', 'yes'],
+		];
+		$result = $this->getResults($map);
+		$this->assertArrayNotHasKey('exclude_groups_from_sharing', $result);
 	}
 
 	public function testNoUserEnumeration() {
