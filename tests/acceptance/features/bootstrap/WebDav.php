@@ -1405,6 +1405,27 @@ trait WebDav {
 	/**
 	 * Old style chunking upload
 	 *
+	 * @When user :user uploads the following :total chunks to :file with old chunking and using the API
+	 * @Given user :user has uploaded the following :total chunks to :file with old chunking and using the API
+	 *
+	 * @param string $user
+	 * @param string $total
+	 * @param string $file
+	 * @param TableNode $chunkDetails
+	 *
+	 * @return void
+	 */
+	public function userUploadsTheFollowingChunksUsingOldChunking($user, $total, $file, TableNode $chunkDetails) {
+		foreach ($chunkDetails->getTable() as $chunkDetail) {
+			$chunkNumber = $chunkDetail[0];
+			$chunkContent = $chunkDetail[1];
+			$this->userUploadsChunkedFile($user, $chunkNumber, $total, $chunkContent, $file);
+		}
+	}
+
+	/**
+	 * Old style chunking upload
+	 *
 	 * @When user :user uploads chunk file :num of :total with :data to :destination using the API
 	 * @Given user :user has uploaded chunk file :num of :total with :data to :destination
 	 *
@@ -1429,6 +1450,29 @@ trait WebDav {
 		} catch (\GuzzleHttp\Exception\RequestException $ex) {
 			$this->response = $ex->getResponse();
 		}
+	}
+
+	/**
+	 * New style chunking upload
+	 *
+	 * @When user :user uploads the following chunks to :file with new chunking and using the API
+	 * @Given user :user has uploaded the following chunks to :file with new chunking and using the API
+	 *
+	 * @param string $user
+	 * @param string $file
+	 * @param TableNode $chunkDetails
+	 *
+	 * @return void
+	 */
+	public function userUploadsTheFollowingChunksUsingNewChunking($user, $file, TableNode $chunkDetails) {
+		$chunkingId = 'chunking-42';
+		$this->userCreatesANewChunkingUploadWithId($user, $chunkingId);
+		foreach ($chunkDetails->getTable() as $chunkDetail) {
+			$chunkNumber = $chunkDetail[0];
+			$chunkContent = $chunkDetail[1];
+			$this->userUploadsNewChunkFileOfWithToId($user, $chunkNumber, $chunkContent, $chunkingId);
+		}
+		$this->userMovesNewChunkFileWithIdToMychunkedfile($user, $chunkingId, $file);
 	}
 
 	/**
